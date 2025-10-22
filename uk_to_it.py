@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import os, re, sys, random, csv
+import os, re, sys, csv
 import numpy as np
 import pandas as pd
 from collections import defaultdict
@@ -49,6 +49,9 @@ IT_KEYWORD_SETS = [
     "oscurante vetri auto, pellicola oscuramento vetri, pellicola vetri oscurati auto, pellicola auto vetri",
     "pellicola oscuramento vetri, pellicola vetri oscurati auto, pellicola auto vetri, pellicola per oscurare vetri auto",
 ]
+
+# Deterministic keyword assignment ensures consistent exports.
+DEFAULT_GENERIC_KEYWORDS = IT_KEYWORD_SETS[0]
 
 COLUMNS_TO_COPY = []  # ако е празно -> копира всички съвпадащи по ИМЕ
 PRICE_COLS_HINTS = ["price","our_price","standard_price","list_price",
@@ -266,8 +269,8 @@ def uk_to_it(uk_file, it_template_file, out_path=None, find_replace_xlsx=None):
         if col in it_out.columns:
             it_out[col] = it_out[col].replace(TONE_MAP)
 
-    if "generic_keyword" in it_out.columns:
-        it_out["generic_keyword"] = random.choice(IT_KEYWORD_SETS)
+    if "generic_keywords" in it_out.columns:
+        it_out["generic_keywords"] = DEFAULT_GENERIC_KEYWORDS
 
     it_out = cleanup_nulls(it_out)
     out_file = out_path or file_out_name(uk_file)
