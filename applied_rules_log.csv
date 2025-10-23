@@ -1,0 +1,73 @@
+field,rule,count
+color_name,EXACT 05% Limo Black->05% Super Nero,76
+color_name,EXACT 20% Dark Smoke->20% Fumo Scuro,76
+color_name,EXACT 35% Medium Smoke->35% Fumo Medio,76
+color_name,EXACT 50% Light Smoke->50% Fumo Chiaro,76
+bullet_point2,"EXACT Available in Various Shades - Choose from multiple tint shades to match your desired level of darkness and privacy - 5% (the darkest shade), 20%, 35%, 50% (the lightest shade)->Disponibile in Varie Tonalità (5%, 20%, 35%, 50%) – scegli il livello ideale di oscuramento e privacy per la tua auto.",304
+bullet_point3,"EXACT UV Protection, Heat and Glare Reduction - Blocks 99% of harmful UV rays, reduces glare and heat, helps protect your skin and keeps your car’s interior looking new longer->Protezione UV e Riduzione Calore – blocca fino al 99% dei raggi UV, riduce l’abbagliamento e mantiene l’abitacolo più fresco.",304
+bullet_point4,"EXACT Improved Comfort & Privacy - Ensures clear visibility with minimal distortion, reduces eye strain from bright sunlight, offers increased privacy for a more enjoyable ride->Comfort e Privacy Migliorati – visibilit? chiara senza distorsioni, maggiore comfort di guida e protezione dagli sguardi esterni.",304
+bullet_point5,"EXACT Scratch-Resistant and Long-Lasting - Durable, high-performance tint that resists scratches, maintaining a sleek, polished look for years->Pellicola Durevole e Anti-Graffio – materiale di alta qualità?, resistente a bolle, scolorimento e graffi nel tempo.",304
+material_type,EXACT Polyester->Poliestere,304
+update_delete,EXACT Update->Aggiorna,368
+parent_child,EXACT parent->Parent,64
+parent_child,EXACT child->Child,304
+relationship_type,EXACT Variation->Variation,304
+variation_theme,EXACT Color->Colore,265
+variation_theme,EXACT Color-Size->Color-Size,103
+package_level,EXACT Unit->Unità,304
+color_map,EXACT Black->nero,304
+item_type_name,EXACT Pre Cut Window Tint->Pellicola Oscurante Vetri Auto,304
+unit_count_type,EXACT count->unità,304
+length_longer_edge_unit_of_measure,EXACT Centimetres->Centimetri,304
+width_shorter_edge_unit_of_measure,EXACT Centimetres->Centimetri,304
+package_length_unit_of_measure,EXACT CM->CM,304
+fulfillment_center_id,EXACT DEFAULT->DEFAULT,304
+is_fragile,EXACT No->No,304
+package_weight_unit_of_measure,EXACT KG->KG,304
+country_of_origin,EXACT Bulgaria->Bulgaria,368
+compliance_media_content_type1,EXACT User Manual->Manuale per l’installazione,368
+gpsr_safety_attestation,EXACT Yes->Sì,368
+gpsr_manufacturer_reference_email_address,EXACT tintcom_amazon@abv.bg->tintcom_amazon@abv.bg,368
+compliance_media_source_location1,EXACT https://tintcom.com/Window_Tint/en_Instructions.pdf->https://tintcom.com/Window_Tint/it_Instructions.pdf,368
+compliance_media_content_language1,EXACT en_GB->it_IT,368
+product_tax_code,EXACT A_GEN_STANDARD->A_GEN_STANDARD,304
+condition_type,EXACT New->Nuovo,304
+installation_type,EXACT Heat Shrink->,304
+item_name,REGEX TINTCOM Pre-Cut Window Tint Film for->TINTCOM Pellicola Oscurante Vetri Auto Pre-Tagliata per,368
+item_name,"REGEX Rear Sides & Rear Window - Custom Fit, UV Protection, High Performance->Vetri Posteriori & Lunotto – Protezione UV, Riduzione Calore e Riflessi",358
+item_name,REGEX door->Porte,284
+product_description,REGEX door->Porte,236
+bullet_point1,REGEX door->Porte,236
+item_name,REGEX Estate->Station Wagon,69
+product_description,REGEX Estate->Station Wagon,56
+bullet_point1,REGEX Estate->Station Wagon,56
+item_name,REGEX Saloon->Berlina,97
+product_description,REGEX Saloon->Berlina,84
+bullet_point1,REGEX Saloon->Berlina,84
+item_name,REGEX Cabriolet->Cabrio,25
+product_description,REGEX Cabriolet->Cabrio,20
+bullet_point1,REGEX Cabriolet->Cabrio,20
+item_name,REGEX Coupe->Coupè,23
+product_description,REGEX Coupe->Coupè,20
+bullet_point1,REGEX Coupe->Coupè,20
+item_name,REGEX Hatchback->,74
+product_description,REGEX Hatchback->,60
+bullet_point1,REGEX Hatchback->,60
+item_name,REGEX Long Base->versione a passo lungo,5
+product_description,REGEX Long Base->versione a passo lungo,4
+bullet_point1,REGEX Long Base->versione a passo lungo,4
+item_name,REGEX 05% Limo Black->05% Super Nero,76
+product_description,REGEX 05% Limo Black->05% Super Nero,76
+bullet_point1,REGEX 05% Limo Black->05% Super Nero,76
+item_name,REGEX 20% Dark Smoke->20% Fumo Scuro,76
+product_description,REGEX 20% Dark Smoke->20% Fumo Scuro,76
+bullet_point1,REGEX 20% Dark Smoke->20% Fumo Scuro,76
+item_name,REGEX 35% Medium Smoke->35% Fumo Medio,76
+product_description,REGEX 35% Medium Smoke->35% Fumo Medio,76
+bullet_point1,REGEX 35% Medium Smoke->35% Fumo Medio,76
+item_name,REGEX 50% Light Smoke->50% Fumo Chiaro,76
+product_description,REGEX 50% Light Smoke->50% Fumo Chiaro,76
+bullet_point1,REGEX 50% Light Smoke->50% Fumo Chiaro,76
+product_description,REGEX TINTCOM Pre-Cut Window Tint Film for-><b>TINTCOM Pellicola Oscurante Vetri Auto Pre-Tagliata per,304
+bullet_point1,REGEX TINTCOM Pre-Cut Car Window Tint Film for->TINTCOM Pellicola Oscurante Pre-Tagliata per,304
+bullet_point1,"REGEX Rear Side Windows & Rear Window, no cutting needed, instructions included->Kit completo per vetri posteriori e lunotto, tagliato su misura, pronto all’uso.",296
