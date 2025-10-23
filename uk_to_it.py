@@ -74,8 +74,11 @@ EXACT_ONLY_FIELDS = {
 # дълги текстови колони – позволяваме regex
 LONG_TEXT_FIELDS = {
     "item_name","product_description","bullet_point1","bullet_point2",
-    "bullet_point3","bullet_point4","bullet_point5","generic_keywords","color_name"
+        "bullet_point3","bullet_point4","bullet_point5","generic_keywords",
+    "generic_keyword","color_name"
 }
+
+GENERIC_KEYWORD_COLUMNS = ("generic_keywords", "generic_keyword")
 
 # ==================== ХЕЛПЕРИ ====================
 
@@ -235,6 +238,34 @@ def cleanup_nulls(df: pd.DataFrame) -> pd.DataFrame:
         (isinstance(v, str) and v.strip().lower() in ("nan","none","nat"))
     ) else v)
 
+def normalize_generic_keyword_columns(uk_df: pd.DataFrame, it_df: pd.DataFrame) -> pd.DataFrame:
+    target_col = next((c for c in GENERIC_KEYWORD_COLUMNS if c in it_df.columns), None)
+    if not target_col:
+        return it_df
+
+    source_col = next((c for c in GENERIC_KEYWORD_COLUMNS if c in uk_df.columns), None)
+    if source_col and source_col != target_col:
+        it_df[target_col] = uk_df[source_col].reindex(it_df.index, fill_value="")
+
+    if source_col:
+        source_values = uk_df[source_col].reindex(it_df.index, fill_value="")
+    else:
+        source_values = it_df[target_col]
+
+    source_values = source_values.fillna("").astype(str)
+    heat_shrink_mask = source_values.str.strip().str.casefold() == "heat shrink"
+
+    it_df[target_col] = DEFAULT_GENERIC_KEYWORDS
+    if heat_shrink_mask.any():
+        it_df.loc[heat_shrink_mask, target_col] = ""
+
+    for col in GENERIC_KEYWORD_COLUMNS:
+        if col != target_col and col in it_df.columns:
+            it_df.drop(columns=col, inplace=True)
+
+    return it_df
+
+
 def write_into_it_template(template_path: str, df: pd.DataFrame, out_path: str):
     df = df.replace({np.nan: ""}).fillna("")
     wb = load_workbook(template_path)
@@ -347,10 +378,7 @@ def uk_to_it(uk_file, it_template_file, out_path=None, find_replace_xlsx=None):
         )
 
     # keywords – попълни правилната колона
-    if "generic_keywords" in it_out.columns:
-        it_out["generic_keywords"] = DEFAULT_GENERIC_KEYWORDS
-    elif "generic_keyword" in it_out.columns:
-        it_out["generic_keyword"] = DEFAULT_GENERIC_KEYWORDS
+    it_out = normalize_generic_keyword_columns(uk, it_out)
 
     # 6) Почистване и запис
     it_out = cleanup_nulls(it_out)
