@@ -7,9 +7,13 @@ from openpyxl import load_workbook
 
 # ==================== BUSINESS RULES ====================
 
+# default item tail (can be overridden from Find_and_Replace.xlsx -> sheet "settings", key=item_tail_it)
 ITEM_TAIL = " - Rear Sides & Rear Window - Custom Fit, UV Protection, Heat & Glare Reduction, High Performance"
 
-def normalize_item_name(name: str) -> str:
+# default generic keywords (can be overridden from settings: generic_keywords_default)
+GENERIC_KEYWORDS_DEFAULT = "pellicola oscurante vetri auto, pellicola vetri auto, oscuramento vetri auto, oscurare vetri auto"
+
+def normalize_item_name(name: str, item_tail: str = "") -> str:
     if not isinstance(name, str) or "TINTCOM" not in name:
         return name
     m = re.search(r"for\s+(.+?)\s+-\s+(?:\((\d+%[^)]*)\)\s+-\s+)?", name, flags=re.I)
@@ -17,39 +21,16 @@ def normalize_item_name(name: str) -> str:
         return name
     car = m.group(1).strip()
     shade = (m.group(2) or "").strip()
-    return (f"TINTCOM Pre-Cut Window Tint Film for {car} - ({shade}){ITEM_TAIL}"
-            if shade else f"TINTCOM Pre-Cut Window Tint Film for {car}{ITEM_TAIL}")
+    tail = item_tail or ITEM_TAIL
+    return (f"TINTCOM Pre-Cut Window Tint Film for {car} - ({shade}){tail}"
+            if shade else f"TINTCOM Pre-Cut Window Tint Film for {car}{tail}")
 
 # Ако искаш италиански етикети – смени стойностите вдясно.
-TONE_MAP = {
-    "05% Limo Black":   "05% Limo Black",
-    "20% Dark Smoke":   "20% Dark Smoke",
-    "35% Medium Smoke": "35% Medium Smoke",
-    "50% Light Smoke":  "50% Light Smoke",
-    "70% Ultra Light":  "70% Ultra Light",
-}
+# NOTE: Tone map moved to Find_and_Replace.xlsx -> sheet "tone_map"
+# TONE_MAP removed from code.
 
-IT_KEYWORD_SETS = [
-    "pellicola oscurante vetri auto, pellicola vetri auto, oscuramento vetri auto, oscurare vetri auto",
-    "pellicola vetri auto, oscuramento vetri auto, oscurare vetri auto, vetri oscurati",
-    "oscuramento vetri auto, oscurare vetri auto, vetri oscurati, pellicola oscurante",
-    "oscurare vetri auto, vetri oscurati, pellicola oscurante, oscuramento vetri",
-    "vetri oscurati, pellicola oscurante, oscuramento vetri, pellicola oscurante vetri auto pretagliata",
-    "pellicola oscurante, oscuramento vetri, pellicola oscurante vetri auto pretagliata, kit pellicola oscurante vetri auto",
-    "oscuramento vetri, pellicola oscurante vetri auto pretagliata, kit pellicola oscurante vetri auto, oscura vetri auto",
-    "pellicola oscurante vetri auto pretagliata, kit pellicola oscurante vetri auto, oscura vetri auto, pellicola oscurante auto",
-    "kit pellicola oscurante vetri auto, oscura vetri auto, pellicola oscurante auto, pellicola oscurante vetri auto pre-tagliata",
-    "oscura vetri auto, pellicola oscurante auto, pellicola oscurante vetri auto pre-tagliata, vetri auto oscurati",
-    "pellicola oscurante auto, pellicola oscurante vetri auto pre-tagliata, vetri auto oscurati, oscuramento",
-    "pellicola oscurante vetri auto pre-tagliata, vetri auto oscurati, oscuramento, pellicole oscuranti vetri auto",
-    "vetri auto oscurati, oscuramento, pellicole oscuranti vetri auto, pellicola vetro oscurante",
-    "oscuramento, pellicole oscuranti vetri auto, pellicola vetro oscurante, oscurante vetri auto",
-    "pellicole oscuranti vetri auto, pellicola vetro oscurante, oscurante vetri auto, pellicola oscuramento vetri",
-    "pellicola vetro oscurante, oscurante vetri auto, pellicola oscuramento vetri, pellicola vetri oscurati auto",
-    "oscurante vetri auto, pellicola oscuramento vetri, pellicola vetri oscurati auto, pellicola auto vetri",
-    "pellicola oscuramento vetri, pellicola vetri oscurati auto, pellicola auto vetri, pellicola per oscurare vetri auto",
-]
-DEFAULT_GENERIC_KEYWORDS = IT_KEYWORD_SETS[0]
+# IT_KEYWORD_SETS / DEFAULT_GENERIC_KEYWORDS moved into settings (generic_keywords_default)
+# ...existing code...
 
 COLUMNS_TO_COPY = []  # ако е празно -> копира всички съвпадащи по име
 PRICE_COLS_HINTS = ["price","our_price","standard_price","list_price",
@@ -82,6 +63,45 @@ GENERIC_KEYWORD_COLUMNS = ("generic_keywords", "generic_keyword")
 
 # ==================== ХЕЛПЕРИ ====================
 
+def load_it_phrases_from_excel(xls: pd.ExcelFile) -> list[str]:
+    """
+    Чете лист 'it_keywords'.
+    Поддържа два формата:
+      A) колона 'phrase' (готови фрази, разделени със запетайки)
+      B) колони k1..k8 (отделни термина) -> комбинира до 4, разбърква
+    Връща списък от вече нормализирани фрази (string), готови за поставяне.
+    """
+    if "it_keywords" not in xls.sheet_names:
+        return []
+    df = xls.parse("it_keywords").fillna("")
+    df.columns = [str(c).strip().lower() for c in df.columns]
+    phrases: list[str] = []
+    if "phrase" in df.columns:
+        for s in df["phrase"].astype(str):
+            s = s.strip().strip(",")
+            if s:
+                # нормализирай двойни интервали и запетаи
+                parts = [p.strip() for p in s.split(",") if p.strip()]
+                if parts:
+                    import random
+                    random.shuffle(parts)
+                    phrases.append(", ".join(parts[:4]))
+    else:
+        # търси k1..k8
+        kcols = [c for c in df.columns if re.fullmatch(r"k[1-8]", c)]
+        if kcols:
+            import random
+            for _, row in df[kcols].iterrows():
+                terms = [str(row[c]).strip() for c in kcols if str(row[c]).strip()]
+                if not terms:
+                    continue
+                # уникални в оригинален ред
+                seen = {}
+                terms = [seen.setdefault(t, t) for t in terms if t not in seen]
+                random.shuffle(terms)
+                phrases.append(", ".join(terms[:4]))
+    return phrases
+
 def translate_uk_description_to_it_html(uk_description: str, name: str = "", color: str = "") -> str:
     if not isinstance(uk_description, str):
         return ""
@@ -97,9 +117,14 @@ def translate_uk_description_to_it_html(uk_description: str, name: str = "", col
 
     # извади име/нюанс ако не са подадени
     def extract_name(src: str) -> str:
+        if re.search(r"\[NAME\]", src, flags=re.I):
+            return "[NAME]"
         m = re.search(r"for\s+(.+?)\s+-\s+", src, flags=re.I)
         return m.group(1).strip() if m else ""
     def extract_color(src: str) -> str:
+        # preserve literal {COLOR} placeholder if present
+        if re.search(r"\{COLOR\}", src, flags=re.I):
+            return "{COLOR}"
         m = re.search(r"\{([^}]+)\}", src)
         if m: return m.group(1).strip()
         m = re.search(r"\(([^)]+)\)\s+-\s+Rear", src, flags=re.I)
@@ -167,6 +192,24 @@ def load_map_sheet(xls: pd.ExcelFile, sheet_name: str) -> pd.DataFrame:
     for k in ["field","find","replace"]:
         if k not in df.columns: df[k] = ""
     return df[["field","find","replace"]]
+
+def load_settings(xls: pd.ExcelFile) -> dict:
+    # expects sheet "settings" with columns key,value
+    res = {}
+    if "settings" not in xls.sheet_names:
+        return res
+    df = xls.parse("settings").fillna("")
+    cols = {str(c).strip().lower(): c for c in df.columns}
+    key_col = cols.get("key")
+    val_col = cols.get("value") or cols.get("val") or cols.get("setting")
+    if not key_col:
+        return res
+    for _, r in df.iterrows():
+        k = str(r.get(key_col, "")).strip()
+        v = str(r.get(val_col, "")).strip() if val_col else ""
+        if k:
+            res[k.lower()] = v
+    return res
 
 def expand_fields(df_columns, field_cell: str):
     return [c.strip() for c in str(field_cell).split("|")
@@ -238,7 +281,13 @@ def cleanup_nulls(df: pd.DataFrame) -> pd.DataFrame:
         (isinstance(v, str) and v.strip().lower() in ("nan","none","nat"))
     ) else v)
 
-def normalize_generic_keyword_columns(uk_df: pd.DataFrame, it_df: pd.DataFrame) -> pd.DataFrame:
+def normalize_generic_keyword_columns(
+    uk_df: pd.DataFrame,
+    it_df: pd.DataFrame,
+    default_keywords: str = "",
+    heat_shrink_blank: bool = False,
+    phrases: list[str] | None = None
+) -> pd.DataFrame:
     target_col = next((c for c in GENERIC_KEYWORD_COLUMNS if c in it_df.columns), None)
     if not target_col:
         return it_df
@@ -254,9 +303,29 @@ def normalize_generic_keyword_columns(uk_df: pd.DataFrame, it_df: pd.DataFrame) 
 
     source_values = source_values.fillna("").astype(str)
     heat_shrink_mask = source_values.str.strip().str.casefold() == "heat shrink"
+    has_uk_kw = source_values.str.strip() != ""
 
-    it_df[target_col] = DEFAULT_GENERIC_KEYWORDS
-    if heat_shrink_mask.any():
+    # по подразбиране – празно навсякъде
+    it_df[target_col] = ""
+
+    # ако UK има keywords → поставяме фраза от it_keywords (ако има), иначе fallback към default_keywords
+    if phrases:
+        ph = phrases[:] if phrases else []
+        n = len(ph)
+        idx = 0
+        sel = it_df[target_col].copy()
+        for i in range(len(it_df)):
+            if has_uk_kw.iloc[i]:
+                if n:
+                    sel.iloc[i] = ph[idx % n]
+                    idx += 1
+                else:
+                    sel.iloc[i] = default_keywords
+        it_df[target_col] = sel
+    else:
+        it_df.loc[has_uk_kw, target_col] = default_keywords
+
+    if heat_shrink_blank and heat_shrink_mask.any():
         it_df.loc[heat_shrink_mask, target_col] = ""
 
     for col in GENERIC_KEYWORD_COLUMNS:
@@ -264,6 +333,8 @@ def normalize_generic_keyword_columns(uk_df: pd.DataFrame, it_df: pd.DataFrame) 
             it_df.drop(columns=col, inplace=True)
 
     return it_df
+
+
 
 
 def write_into_it_template(template_path: str, df: pd.DataFrame, out_path: str):
@@ -299,6 +370,7 @@ def write_rules_log(out_path):
 # ==================== ОСНОВНА ФУНКЦИЯ ====================
 
 def uk_to_it(uk_file, it_template_file, out_path=None, find_replace_xlsx=None):
+    global ITEM_TAIL, GENERIC_KEYWORDS_DEFAULT
     # 1) UK таблица (ред 3 = header)
     uk = pd.read_excel(uk_file, header=2, dtype=str).fillna("")
 
@@ -312,15 +384,42 @@ def uk_to_it(uk_file, it_template_file, out_path=None, find_replace_xlsx=None):
     for c in cols:
         it_out[c] = uk[c]
 
+    # default empty tone map
+    tone_map = {}
+    # default settings
+    settings = {}
+    generic_kw_default = GENERIC_KEYWORDS_DEFAULT
+    heat_shrink_blank_flag = False
+    item_tail_from_xls = ""
     # 4) Правила
+    phrases_for_it = []
     if find_replace_xlsx:
         xls = pd.ExcelFile(find_replace_xlsx)
+        # settings & tone map
+        settings = load_settings(xls)
+        item_tail_from_xls = settings.get("item_tail_it", "").strip() or item_tail_from_xls
+        generic_kw_default = settings.get("generic_keywords_default", "").strip() or generic_kw_default
+        heat_shrink_blank_flag = (settings.get("heat_shrink_blank", "0").strip().lower() in ("1","true","yes","y"))
+        # зареди италианските ключови фрази (ако има лист)
+        phrases_for_it = load_it_phrases_from_excel(xls)
+
         text_map  = load_map_sheet(xls, "text_map")
         words_map = load_map_sheet(xls, "words_find_replace") if "words_find_replace" in xls.sheet_names else (
                     load_map_sheet(xls, "words_find_replece") if "words_find_replece" in xls.sheet_names
                     else pd.DataFrame(columns=["field","find","replace"]))
         sku_map   = load_map_sheet(xls, "sku_map")
         price_map_df = xls.parse("price_map").fillna("") if "price_map" in xls.sheet_names else pd.DataFrame(columns=["find","replace"])
+
+        # tone_map sheet (find -> replace) applied to color_name/size_name
+        if "tone_map" in xls.sheet_names:
+            tm = xls.parse("tone_map").fillna("")
+            # find/replace columns tolerant lookup
+            cols_map = {str(c).strip().lower(): c for c in tm.columns}
+            find_col = cols_map.get("find") or cols_map.get("from") or list(tm.columns)[0]
+            rep_col  = cols_map.get("replace") or cols_map.get("to") or (list(tm.columns)[1] if len(tm.columns)>1 else find_col)
+            tone_map = dict(zip(tm[find_col].astype(str), tm[rep_col].astype(str)))
+            # apply immediately to color_name / size_name (if present)
+            it_out = apply_value_map(it_out, [c for c in ("color_name","size_name") if c in it_out.columns], tone_map)
 
         # 4.1 точни замени
         it_out = apply_exact_rules(it_out, text_map)
@@ -352,17 +451,23 @@ def uk_to_it(uk_file, it_template_file, out_path=None, find_replace_xlsx=None):
     if "update_delete" in it_out.columns:
         it_out["update_delete"] = it_out["update_delete"].replace({"Update":"Aggiorna","update":"Aggiorna"})
     if "item_name" in it_out.columns:
-        it_out["item_name"] = it_out["item_name"].astype(str).map(normalize_item_name)
-    if "material_type" in it_out.columns:
-        it_out["material_type"] = it_out["material_type"].replace({"Polyester":"Poliestere"})
-    if "color_map" in it_out.columns:
-        it_out["color_map"] = it_out["color_map"].replace({"Black":"nero","black":"nero"})
-    for col in ("color_name","size_name"):
-        if col in it_out.columns:
-            it_out[col] = it_out[col].replace(TONE_MAP)
+        it_out["item_name"] = it_out["item_name"].astype(str).map(
+        lambda s: normalize_item_name(s, item_tail_from_xls)
+    )
 
-    # „Heat Shrink“ -> празно
-    if "installation_type" in it_out.columns:
+    # NOTE: material_type and color_map hard-coded replacements moved to Find_and_Replace.xlsx (text_map / words_find_replace)
+    # remove in-code replacements; if users want them they must place appropriate rules in the Excel.
+
+    # apply tone_map again in case it was provided but columns added later
+    if 'tone_map' in locals() and tone_map:
+        it_out = apply_value_map(it_out, [c for c in ("color_name","size_name") if c in it_out.columns], tone_map)
+
+    # „Heat Shrink“ -> празно controlled by settings (heat_shrink_blank = "1"/"0")
+    heat_shrink_flag = True
+    if isinstance(settings, dict) and settings.get("heat_shrink_blank") is not None:
+        v = str(settings.get("heat_shrink_blank","")).strip().lower()
+        heat_shrink_flag = v in ("1","true","yes","y")
+    if heat_shrink_flag and "installation_type" in it_out.columns:
         mask = it_out["installation_type"].astype(str).str.strip().str.lower().eq("heat shrink")
         it_out.loc[mask, "installation_type"] = ""
 
@@ -377,8 +482,14 @@ def uk_to_it(uk_file, it_template_file, out_path=None, find_replace_xlsx=None):
             axis=1
         )
 
-    # keywords – попълни правилната колона
-    it_out = normalize_generic_keyword_columns(uk, it_out)
+    # keywords – попълни правилната колона:
+    # само за редове, където UK има keywords; използвай it_keywords (разбъркани до 4 термина)
+    it_out = normalize_generic_keyword_columns(
+        uk, it_out,
+        default_keywords=generic_kw_default,
+        heat_shrink_blank=heat_shrink_blank_flag,
+        phrases=phrases_for_it
+    )
 
     # 6) Почистване и запис
     it_out = cleanup_nulls(it_out)
