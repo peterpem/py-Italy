@@ -1,0 +1,74 @@
+Ред на командите в Codex
+
+Пускай точно този блок в Codex (по една команда в отделно съобщение):
+
+План за рефактор
+
+/plan Refactor uk_to_it.py to externalize all language/market content into Find_and_Replace.xlsx.
+Goals:
+1) Move ITEM_TAIL to Excel → sheet `settings` (key=item_tail_it).
+2) Remove TONE_MAP constant; read sheet `tone_map` (find,replace), apply to color_name|size_name.
+3) Remove IT_KEYWORD_SETS/DEFAULT_GENERIC_KEYWORDS; read `settings` (key=generic_keywords_default) and fill generic_keywords/generic_keyword.
+4) Keep EXACT_ONLY_FIELDS in code (safety), but move hard-coded replacements like Polyester→Poliestere, Black→nero into text_map/words_find_replace.
+5) Make “Heat Shrink → blank” controlled by settings (key=heat_shrink_blank=1/0).
+6) Keep the Italian description generator in Python, but ensure it uses [NAME] and {COLOR} from the UK text.
+Deliverables: list exact edit points (file:line), and a single cohesive patch ready to apply.
+
+
+Диференциал около константите
+
+/diff uk_to_it.py around "BUSINESS RULES" 180
+
+
+Поискай единен patch
+
+/plan Produce a unified patch for uk_to_it.py implementing the plan:
+- Add Excel `settings` loader (key,value) and variables:
+  ITEM_TAIL_FROM_XLS, GENERIC_KW_DEFAULT, HEAT_SHRINK_BLANK.
+- Add `tone_map` loader (find,replace) and apply to color_name|size_name.
+- Change normalize_item_name(name: str) → normalize_item_name(name: str, item_tail: str) and pass ITEM_TAIL_FROM_XLS when mapping item_name.
+- Remove TONE_MAP, IT_KEYWORD_SETS, DEFAULT_GENERIC_KEYWORDS; stop hard-coded Polyester/Black replacements.
+- Use GENERIC_KW_DEFAULT to fill generic_keywords/generic_keyword; keep Heat Shrink blank logic with settings flag.
+- Keep description generator function as-is, just ensure it remains called for product_description.
+Return only one final patch block.
+
+
+Приложи patch-а
+
+/apply The previous patch to uk_to_it.py
+
+
+Статичен преглед
+
+/review uk_to_it.py Focus on: reading `settings`, `tone_map`, replacing constants, safe handling of missing sheets, no hard-coded language strings left in code. Point out any missed spots.
+
+
+Документация за Excel
+
+/plan Create or document the expected Excel layout in README:
+- Sheet: settings (columns: key,value)
+  item_tail_it = " - Vetri Posteriori & Lunotto – Protezione UV, Riduzione Calore e Riflessi"
+  generic_keywords_default = "pellicola oscurante vetri auto, pellicola vetri auto, oscuramento vetri auto, oscurare vetri auto"
+  heat_shrink_blank = "1"
+- Sheet: tone_map (columns: find,replace)
+  05% Limo Black → 05% Super Nero
+  20% Dark Smoke → 20% Fumo Scuro
+  35% Medium Smoke → 35% Fumo Medio
+  50% Light Smoke → 50% Fumo Chiaro
+  70% Ultra Light → 70% Ultra Leggera
+- Existing sheets: text_map, words_find_replace, sku_map, price_map (as you already use).
+Output: a README snippet.
+
+
+Мигрирай твърдо-кодираните преводи към Excel
+
+/plan Remove hard-coded replacements like:
+- material_type: Polyester→Poliestere
+- color_map: Black→nero
+from uk_to_it.py, and ensure they live in text_map/words_find_replace as EXACT rules.
+Return a minimal patch deleting those lines and relying on apply_exact_rules/apply_text_rules.
+
+
+Финална проверка на item_name
+
+/review uk_to_it.py Verify that normalize_item_name now uses item_tail_it from Excel settings and no E
