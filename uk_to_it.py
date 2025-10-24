@@ -341,21 +341,46 @@ def write_into_it_template(template_path: str, df: pd.DataFrame, out_path: str):
     df = df.replace({np.nan: ""}).fillna("")
     wb = load_workbook(template_path)
     ws = wb.active
-    col_index_by_name = {ws.cell(row=3, column=c).value: c
-                         for c in range(1, ws.max_column + 1)}
+
+    # Събери ВСИЧКИ индекси по име (ред 3 са заглавията)
+    name_to_cols = {}
+    for c in range(1, ws.max_column + 1):
+        hdr = ws.cell(row=3, column=c).value
+        name_to_cols.setdefault(hdr, []).append(c)
+
+    # Почисти данните (от ред 4 надолу)
     start_row = 4
     if ws.max_row >= start_row:
         for r in range(start_row, ws.max_row + 1):
             for c in range(1, ws.max_column + 1):
                 ws.cell(row=r, column=c, value=None)
+
+    # Специален случай: липсва 'part_number' в шаблона, но има 2x 'product_description'
+    prod_desc_cols = name_to_cols.get("product_description") or name_to_cols.get("Descrizione prodotto") or []
+    has_part_number_col = ("part_number" in name_to_cols)
+    two_prod_desc = (len(prod_desc_cols) >= 2)
+
     r = start_row
     for _, row in df.iterrows():
+        # 1) нормално записване: за всяка колона в df пиши във всички целеви колони с това име
         for col_name, val in row.items():
-            if col_name in col_index_by_name:
-                c = col_index_by_name[col_name]
-                ws.cell(row=r, column=c, value=(None if val == "" else val))
+            if col_name in name_to_cols:
+                for c in name_to_cols[col_name]:
+                    ws.cell(row=r, column=c, value=(None if val == "" else val))
+
+        # 2) специална логика за сбъркан шаблон:
+        #    ако нямаме 'part_number' колона в шаблона, но имаме 2х product_description,
+        #    прехвърли df['part_number'] във ВТОРАТА product_description колона.
+        if (not has_part_number_col) and two_prod_desc and ("part_number" in df.columns):
+            pn_val = row.get("part_number", "")
+            if isinstance(pn_val, float) and pd.isna(pn_val):
+                pn_val = ""
+            ws.cell(row=r, column=prod_desc_cols[1], value=(None if pn_val == "" else pn_val))
+
         r += 1
+
     wb.save(out_path)
+
 
 def write_rules_log(out_path):
     out_dir = os.path.dirname(out_path) or "."
@@ -448,8 +473,9 @@ def uk_to_it(uk_file, it_template_file, out_path=None, find_replace_xlsx=None):
         it_out     = apply_value_map(it_out, price_cols, value_map)
 
     # 5) Бизнес правила
-    if "update_delete" in it_out.columns:
-        it_out["update_delete"] = it_out["update_delete"].replace({"Update":"Aggiorna","update":"Aggiorna"})
+    if heat_shrink_blank_flag and "installation_type" in it_out.columns:
+        mask = it_out["installation_type"].astype(str).str.strip().str.lower().eq("heat shrink")
+        it_out.loc[mask, "installation_type"] = ""
     if "item_name" in it_out.columns:
         it_out["item_name"] = it_out["item_name"].astype(str).map(
         lambda s: normalize_item_name(s, item_tail_from_xls)
